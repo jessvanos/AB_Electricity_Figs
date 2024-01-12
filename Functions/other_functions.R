@@ -125,3 +125,23 @@ SaveIm <- function(CaseName,FileName) {
   
 }
 
+################################################################################
+## FUNCTION: GGSave_Simple
+## Saves all plots to figures folder
+##
+## INPUTS: 
+##    CaseName - name for folder. Enter as "folder"
+##    FileName - Name for image. Enter as "name"
+################################################################################
+GGSave_Simple <- function(FileName,plotinput,w,h) {
+
+  # Save to a local file 
+  ggsave(
+    filename = here(paste("Figures/",FileName,".png", sep = "")),
+    device = "png",
+    plot = plotinput,
+    width=w,
+    height=h,
+    dpi=300)
+  
+}
