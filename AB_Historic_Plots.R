@@ -14,6 +14,8 @@
 library(here)
 source(here('Functions','Other_Functions.R'))       # Other functions used in plotting functions
 source(here('Functions','Map_Functions.R')) 
+source(here('Functions','Historical_Functions.R')) 
+
 
 # Packages required
 packs_to_load = c("tidyverse","ggplot2","scales","grid","gtable","gridExtra","odbc","ggpubr",
@@ -48,6 +50,9 @@ emissions_zone(GHG_AB_CAN_Elec)
 # Total and electricity emissions split by AB and Canada only
 emissions_type_2(GHG_AB_CAN_Elec)
 
+emissions_type_prov(GHG_allprovs)
+
 # Total and electricity emissions splot all provs
 GGSave_Simple('GHG_elec_total_scaled',emissions_type_prov(GHG_allprovs),12,8)
+GGSave_Simple('GHG_elec_Can',elec_emissions_prov(GHG_allprovs),5,8)
 

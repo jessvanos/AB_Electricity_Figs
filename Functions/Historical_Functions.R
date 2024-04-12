@@ -468,3 +468,112 @@ emissions_type_prov <- function(GHG_allprovs) {
                heights=c(1,0.05))
   
 }
+
+################################################################################  
+## FUNCTION: elec_emissions_prov
+## Plot stacked area of Alberta emissions vs Canada emissions for electricity.
+##
+## INPUTS: 
+##    GHG_AB_CAN_Elec - Filtered data
+################################################################################
+elec_emissions_prov <- function(GHG_allprovs) {
+  
+  # GET TERRITORY EMISSIONS
+  # Determine which emissions come from the territories
+  GHG_provs<-GHG_allprovs %>%
+    filter(!Zone == c('Canada')) %>%
+    group_by(Year,Type)%>%
+    summarise(GHGs_provs=sum(GHGs)) %>%
+    ungroup()
+  
+  # Filter all 
+  GHG_Can<-GHG_allprovs %>%
+    filter(Zone =='Canada')%>%
+    rename("GHGs_can"=GHGs) %>%
+    select(.,'Year','GHGs_can','Type')
+  
+  GHG_Terr<-merge(GHG_provs,GHG_Can) %>%
+    mutate("GHGs_terr"=GHGs_can-GHGs_provs,
+           "Zone"="Territories")%>%
+    select(.,'Year','GHGs_terr','Type')
+  
+  # GROUP OTHER SMALL EMITTERS IN WITH TERRITORIES
+  to_remove_a<-c('Canada','Manitoba','Newfoundland and Labrador','Prince Edward Island','Quebec','British Columbia')
+  to_remove_b<-c('Manitoba','Newfoundland and Labrador','Prince Edward Island','Quebec','British Columbia')
+  prov_keep<-c("Rest of Canada",'New Brunswick','Ontario','Nova Scotia','Saskatchewan','Alberta')
+  prov_cols<-c("Rest of Canada"='#252323',
+               'New Brunswick'='#626262',
+               'Ontario'='#A6A6A6',
+               'Nova Scotia'='#C9C9C9',
+               'Saskatchewan'="#EDEDED",
+               'Alberta'="#4472C4")
+  
+  
+  # Group other small provinces with territories
+  GHG_Small<-GHG_allprovs %>%
+    filter(Zone %in% to_remove_b)%>%
+    group_by(Year,Type)%>%
+    summarise(GHGs_small=sum(GHGs)) 
+  
+  GHG_Rest<-merge(GHG_Terr,GHG_Small) %>%
+    mutate("GHGs"=GHGs_small+GHGs_terr,
+           "Zone"="Rest of Canada")%>%
+    select(.,'Year','GHGs','Type','Zone')
+  
+  # Add territories to small total group and rename
+  data<-rbind(GHG_allprovs,GHG_Rest) %>%
+    filter(!Zone %in% to_remove_a) 
+  data$Zone <- factor(data$Zone, levels=prov_keep)
+  
+  # Set figure text size
+  txt_sz=16
+  
+  # Create two new datasets
+  All_data<-data %>%
+    filter(Type=='Total')
+  E_data<-data %>%
+    filter(Type=='Electricity')
+  
+  # Plot for electricity emissions
+  ggplot(E_data) +
+    geom_area(aes(x = Year, y = GHGs, fill = Zone), colour = "black", 
+              alpha=0.8, size=0.25) +
+    
+    # Set the theme for the plot
+    theme_bw() +
+    theme(panel.grid = element_blank(),
+          plot.background = element_rect(fill = "transparent", color = NA)) +
+    
+    # Text and legend
+    theme(axis.text.x = element_text(vjust = 1,color="black"),
+          axis.text.y = element_text(color="black"),
+          axis.title.x = element_blank(),
+          plot.title = element_text(size= txt_sz-2,hjust=0.5),
+          legend.title=element_blank(),
+          legend.key = element_rect(colour = "transparent", fill = "transparent"),
+          legend.key.size = unit(0.5, "cm"),
+          legend.background = element_rect(fill='transparent',colour ='transparent'),
+          legend.box.background = element_rect(fill='transparent', colour = "transparent"),
+          legend.position = c(0.85, 0.92),
+          legend.text=element_text(size= txt_sz-8)) +
+    
+    
+    theme(plot.title = element_text(),
+          text = element_text(size= txt_sz),
+          panel.spacing = unit(2, "lines"),
+          #panel.grid.major.y = element_line(size=0.25,linetype=1,color = 'black'),
+          axis.ticks.x = element_line(),
+          axis.line.y = element_line(),
+          axis.line.x = element_line(),
+          
+    ) +
+    scale_y_continuous(expand=c(0,0), limits = c(0,125), 
+                       breaks = seq(0, 125, by = 25),labels=comma) +
+    
+    scale_x_continuous(expand=c(0,0)) +
+    
+    labs(y =bquote("Electricity Sector Emissions (Mt CO"[2]*"e)")) +
+    #Add colour
+    scale_fill_manual(values = prov_cols) 
+  
+}
