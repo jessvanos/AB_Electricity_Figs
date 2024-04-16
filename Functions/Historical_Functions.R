@@ -537,7 +537,7 @@ elec_emissions_prov <- function(GHG_allprovs) {
   # Plot for electricity emissions
   ggplot(E_data) +
     geom_area(aes(x = Year, y = GHGs, fill = Zone), colour = "black", 
-              alpha=0.8, size=0.25) +
+              alpha=1, size=0.25) +
     
     # Set the theme for the plot
     theme_bw() +
