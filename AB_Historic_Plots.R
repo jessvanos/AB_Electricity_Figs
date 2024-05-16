@@ -40,6 +40,20 @@ GHG_AB_CAN_Elec<- read_excel("Data Files/GHG_data.xlsx",
 
 GHG_allprovs<- read_excel("Data Files/GHG_data.xlsx", 
                              sheet = "Sheet4")
+
+################################################################################
+## PLOT SET UP
+################################################################################
+font_add(family="Times",regular="times.ttf")
+font_add("times_bf", regular = "timesbd.ttf")
+font_add("times_it", regular = "/path/to/your/fonts/timesi.ttf")
+
+Plot_Text <- "Times"
+Plot_Text_bf <- "times_bf"
+Plot_Text_it <- "times_it"
+showtext_auto()
+
+GenText_Sz <- 48
 ################################################################################
 ## Plot Canada & AB
 ################################################################################
@@ -51,8 +65,9 @@ emissions_zone(GHG_AB_CAN_Elec)
 emissions_type_2(GHG_AB_CAN_Elec)
 
 emissions_type_prov(GHG_allprovs)
+emissions_type_prov2(GHG_allprovs)
 
 # Total and electricity emissions splot all provs
-GGSave_Simple('GHG_elec_total_scaled',emissions_type_prov(GHG_allprovs),12,8)
+GGSave_Simple('GHG_elec_total_scaled2',emissions_type_prov2(GHG_allprovs),12,8)
 GGSave_Simple('GHG_elec_Can',elec_emissions_prov(GHG_allprovs),5,8)
 

@@ -385,7 +385,7 @@ emissions_type_prov <- function(GHG_allprovs) {
     theme(axis.text.x = element_text(vjust = 1,color="black"),
           axis.text.y = element_text(color="black"),
           axis.title.x = element_blank(),
-          axis.title.y = element_text(size= txt_sz+4, face = "bold"),
+          axis.title.y = element_text(size= txt_sz+4, face = "bold",family=Plot_Text_bf),
           plot.title = element_text(size= txt_sz-2,hjust=0.5),
           legend.title=element_blank(),
           legend.key = element_rect(colour = "transparent", fill = "transparent"),
@@ -395,7 +395,7 @@ emissions_type_prov <- function(GHG_allprovs) {
           legend.text=element_text(size= txt_sz-4)) +
     
     
-    theme(plot.title = element_text(),
+    theme(plot.title = element_text(family=Plot_Text),
           text = element_text(size= txt_sz),
           panel.spacing = unit(2, "lines"),
           #panel.grid.major.y = element_line(size=0.25,linetype=1,color = 'black'),
@@ -526,7 +526,7 @@ elec_emissions_prov <- function(GHG_allprovs) {
   data$Zone <- factor(data$Zone, levels=prov_keep)
   
   # Set figure text size
-  txt_sz=16
+  txt_sz=14
   
   # Create two new datasets
   All_data<-data %>%
@@ -545,21 +545,23 @@ elec_emissions_prov <- function(GHG_allprovs) {
           plot.background = element_rect(fill = "transparent", color = NA)) +
     
     # Text and legend
-    theme(axis.text.x = element_text(vjust = 1,color="black"),
+    theme(text = element_text(size= txt_sz),
+          axis.text.x = element_text(vjust = 1,color="black"),
           axis.text.y = element_text(color="black"),
           axis.title.x = element_blank(),
-          plot.title = element_text(size= txt_sz-2,hjust=0.5),
+          axis.title.y = element_text(size= txt_sz+2),
+          plot.title = element_text(size= txt_sz-4,hjust=0.5),
+          plot.caption = element_text(hjust = 1,size = txt_sz-4,face = "italic"),             # Plot subtitle size (if present)
           legend.title=element_blank(),
           legend.key = element_rect(colour = "transparent", fill = "transparent"),
           legend.key.size = unit(0.5, "cm"),
           legend.background = element_rect(fill='transparent',colour ='transparent'),
           legend.box.background = element_rect(fill='transparent', colour = "transparent"),
-          legend.position = c(0.85, 0.92),
-          legend.text=element_text(size= txt_sz-8)) +
+          legend.position = c(0.84, 0.92),
+          legend.text=element_text(size= txt_sz-4)) +
     
     
     theme(plot.title = element_text(),
-          text = element_text(size= txt_sz),
           panel.spacing = unit(2, "lines"),
           #panel.grid.major.y = element_line(size=0.25,linetype=1,color = 'black'),
           axis.ticks.x = element_line(),
@@ -572,8 +574,119 @@ elec_emissions_prov <- function(GHG_allprovs) {
     
     scale_x_continuous(expand=c(0,0)) +
     
-    labs(y =bquote("Electricity Sector Emissions (Mt CO"[2]*"e)")) +
+    labs(y =bquote("Electricity Sector Emissions (Mt CO"[2]*"e)"),caption="Data from Canada's Official Greenhouse Gas Inventory") +
     #Add colour
     scale_fill_manual(values = prov_cols) 
+  
+}
+
+################################################################################  
+## FUNCTION: emissions_type_prov
+## Plot stacked area of Alberta emissions vs Canada emissions for electricity and total. Not same axis
+##
+## INPUTS: 
+##    GHG_AB_CAN_Elec - Filtered data
+################################################################################
+emissions_type_prov2 <- function(GHG_allprovs) {
+  
+  # GET TERRITORY EMISSIONS
+  # Determine which emissions come from the territories
+  GHG_provs<-GHG_allprovs %>%
+    filter(!Zone == c('Canada')) %>%
+    group_by(Year,Type)%>%
+    reframe(GHGs_provs=sum(GHGs)) 
+  
+  # Filter all 
+  GHG_Can<-GHG_allprovs %>%
+    filter(Zone =='Canada')%>%
+    rename("GHGs_can"=GHGs) %>%
+    select(.,'Year','GHGs_can','Type')
+  
+  GHG_Terr<-merge(GHG_provs,GHG_Can) %>%
+    mutate("GHGs_terr"=GHGs_can-GHGs_provs,
+           "Zone"="Territories")%>%
+    select(.,'Year','GHGs_terr','Type')
+  
+  # GROUP OTHER SMALL EMITTERS IN WITH TERRITORIES
+  to_remove_a<-c('Canada','Manitoba','Newfoundland and Labrador','Prince Edward Island','New Brunswick')
+  to_remove_b<-c('Manitoba','Newfoundland and Labrador','Prince Edward Island','New Brunswick')
+  prov_keep<-c("Rest of Canada",'Quebec','British Columbia','Ontario','Nova Scotia','Saskatchewan','Alberta')
+  prov_cols<-c("Rest of Canada"='#252323',
+               'Quebec'='#525252',
+               'British Columbia'='#767171',
+               'Ontario'='#A6A6A6',
+               'Nova Scotia'='#C9C9C9',
+               'Saskatchewan'="#EDEDED",
+               'Alberta'="#4472C4")
+  
+  # Group other small provinces with territories
+  GHG_Small <- GHG_allprovs %>%
+    filter(Zone %in% to_remove_b) %>%
+    group_by(Year, Type) %>%
+    reframe(GHGs_small = sum(GHGs))
+  
+  GHG_Rest <- merge(GHG_Terr, GHG_Small, by = c("Year", "Type")) %>%
+    mutate(GHGs = GHGs_small + GHGs_terr, Zone = "Rest of Canada") %>%
+    select(Year, GHGs, Type, Zone)
+  
+  # Add territories to small total group and rename
+  data <- rbind(GHG_allprovs, GHG_Rest) %>%
+    filter(!Zone %in% to_remove_a)
+  data$Zone <- factor(data$Zone, levels = prov_keep)
+  
+  data$Type <- factor(data$Type, levels=c('Total','Electricity'))
+  
+  # Facet breaks
+  my_breaks <- function(x) { if (max(x) < 400) seq(0, 125, 25) else seq(0, 800, 160) }
+  my_limits <- function(x) { if (max(x) < 200) c(0, 125) else c(0, 800) }
+  
+  # Plot for total emissions
+  ggplot(data) +
+    geom_area(aes(x = Year, y = GHGs, fill = Zone), colour = "black", 
+              alpha=0.8, size=0.25) +
+    theme_bw() +
+    facet_wrap(~Type, strip.position = "top",scales="free_y",
+               axes = "all", axis.labels = "all") +
+  
+    # Set the theme for the plot
+    theme(text=element_text(family=Plot_Text)) +
+    theme(axis.text = element_text(color="black"),
+          axis.title = element_text(size = GenText_Sz+6,family=Plot_Text_bf),
+          axis.text.x = element_text(angle = 0, hjust=1,vjust=0.5,color="black",size = GenText_Sz-6),
+          plot.title = element_blank(),
+          text = element_text(size=GenText_Sz),
+          axis.title.x=element_blank(),
+          legend.text = element_text(size = GenText_Sz-6),
+          panel.grid = element_blank(),
+          legend.title = element_blank(),
+          legend.position = "right",
+          #panel.grid.major.y = element_line(size=0.25,linetype=2,color = 'gray70'),
+          panel.background = element_rect(fill = "transparent"),
+          panel.grid.major.x = element_blank(),
+          panel.grid.minor.x = element_blank(),
+          panel.spacing = unit(1.5, "lines"),
+          plot.caption = element_text(size = GenText_Sz-12,family = Plot_Text_it),
+          
+          strip.placement = "outside",
+          strip.text = element_text(size = GenText_Sz-6, color = "black"),
+          strip.background = element_rect(colour=NA, fill=NA),
+          #panel.spacing = unit(0,'lines'),
+          
+          legend.key = element_rect(colour = "transparent", fill = "transparent"),
+          legend.background = element_rect(fill='transparent'),
+          legend.key.size = unit(0.3, "cm"),
+          legend.box.background = element_rect(fill='transparent', colour = "transparent"),
+    ) +
+    
+    scale_y_continuous(expand=expansion(c(0,0)), limits = my_limits, 
+                       breaks=my_breaks) +
+    
+    scale_x_continuous(expand=c(0,0)) +
+    labs(title="Total Emissions",y =expression("National GHG Emissions (Mt CO"[2]*"e)"),caption="Data from Canada's Official Greenhouse Gas Inventory, scales vary") +
+    
+    #Add colour
+    scale_fill_manual(values = prov_cols) +
+    guides(fill = guide_legend(ncol = 1)) 
+    
   
 }
